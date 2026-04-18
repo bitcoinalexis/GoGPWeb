@@ -1,57 +1,253 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GoGP</title>
-  <meta name="description" content="GoGP - Visualiza rutas de transporte en tiempo real" />
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    .container {
-      max-width: 600px;
-      padding: 40px;
-    }
-    h1 {
-      font-size: 3rem;
-      margin-bottom: 10px;
-    }
-    p {
-      font-size: 1.2rem;
-      opacity: 0.9;
-      margin-bottom: 30px;
-    }
-    a.button {
-      display: inline-block;
-      padding: 14px 28px;
-      border-radius: 12px;
-      background: white;
-      color: #0f172a;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 1rem;
-    }
-    a.button:hover {
-      opacity: 0.9;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GoGP – Visual Tron</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:sans-serif}
+
+/* ====== ESPACIO (fase 1) ====== */
+#spaceCanvas{position:fixed;inset:0;z-index:1;background:radial-gradient(circle at center,#020412 0%,#000 70%)}
+
+/* ====== MAPA (fase 2) ====== */
+#map{position:fixed;inset:0;z-index:2;opacity:0;transition:opacity 1.2s ease}
+
+/* ====== OVERLAY HACK (fase 3) ====== */
+#hack{
+  position:fixed;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .8s ease;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,255,255,.06) 0px, rgba(0,255,255,.06) 1px, transparent 1px, transparent 4px),
+    radial-gradient(circle at 50% 50%, rgba(0,255,255,.08), transparent 60%);
+}
+#hack.active{opacity:1}
+#hack::after{
+  content:"";position:absolute;left:0;right:0;height:20%;
+  background:linear-gradient(180deg, transparent, rgba(0,255,255,.18), transparent);
+  animation:scan 3.5s linear infinite;
+}
+@keyframes scan{0%{top:-20%}100%{top:100%}}
+
+/* nodos */
+.node{
+  position:absolute;width:8px;height:8px;border-radius:50%;
+  background:#00ffff;box-shadow:0 0 8px #00ffff,0 0 16px #00ffff;
+  opacity:.0;transform:scale(.6);
+  transition:opacity .5s ease, transform .5s ease;
+}
+.node.on{opacity:1;transform:scale(1)}
+
+/* ====== ESTÉTICA TRON ====== */
+.route{
+  filter: drop-shadow(0 0 6px rgba(0,255,255,.9))
+          drop-shadow(0 0 12px rgba(0,255,255,.6));
+}
+.tron-marker{
+  width:10px;height:10px;border-radius:50%;
+  background:#00ffff;
+  box-shadow:0 0 10px #00ffff,0 0 20px #00ffff,0 0 30px rgba(0,255,255,.6);
+}
+
+/* texto pequeño */
+#title{
+  position:fixed;left:12px;bottom:12px;z-index:4;color:#9ff;
+  font-size:12px;letter-spacing:.12em;opacity:.8
+}
+</style>
 </head>
+
 <body>
-  <div class="container">
-    <h1>GoGP</h1>
-    <p>Consulta rutas y transporte en tiempo real desde tu celular.</p>
-    <a class="button" href="https://play.google.com/store/apps/details?id=com.angylabs.gogp" target="_blank">
-      Descargar en Google Play
-    </a>
-  </div>
+
+<canvas id="spaceCanvas"></canvas>
+<div id="map"></div>
+<div id="hack"></div>
+<div id="title">GOGP // CDMX // LIVE GRID</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* =========================
+   FASE 1: ESPACIO + ZOOM
+   ========================= */
+const canvas = document.getElementById('spaceCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, stars = [];
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize); resize();
+
+// estrellas
+for(let i=0;i<700;i++){
+  stars.push({
+    x: Math.random()*W,
+    y: Math.random()*H,
+    z: Math.random()*1 + 0.2 // profundidad
+  });
+}
+
+// easing
+function easeInOut(t){ return t<.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; }
+
+let start = performance.now();
+const DURATION = 3200; // ms
+
+function drawSpace(now){
+  const t = Math.min(1, (now - start)/DURATION);
+  const k = easeInOut(t); // progreso suave
+
+  ctx.clearRect(0,0,W,H);
+
+  // “acercamiento”: aumenta velocidad y tamaño
+  const speed = 0.2 + k*6.0;
+  const scale = 0.5 + k*2.2;
+
+  for(const s of stars){
+    s.y += speed * s.z;
+    if(s.y > H){ s.y = 0; s.x = Math.random()*W; }
+
+    const size = (0.8 + s.z*1.5) * scale;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(s.x, s.y, size, size);
+  }
+
+  // halo azul tipo “entrada a ciudad”
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)/1.2);
+  grad.addColorStop(0, "rgba(0,255,255,0.12)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  if(t < 1){
+    requestAnimationFrame(drawSpace);
+  } else {
+    enterMap();
+  }
+}
+requestAnimationFrame(drawSpace);
+
+/* =========================
+   FASE 2: MAPA (CDMX)
+   ========================= */
+let map;
+function enterMap(){
+  // fade out espacio, fade in mapa
+  document.getElementById('map').style.opacity = 1;
+
+  map = L.map("map", {zoomControl:false, preferCanvas:true})
+    .setView([19.4326,-99.1332], 11);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19
+  }).addTo(map);
+
+  // pequeña animación de zoom final
+  setTimeout(()=> map.flyTo([19.4326,-99.1332], 13, {duration:1.2}), 200);
+
+  // cuando el mapa está listo, activamos “hack”
+  setTimeout(activateHack, 1200);
+
+  initDemoRoutes();
+}
+
+/* =========================
+   FASE 3: OVERLAY HACK
+   ========================= */
+function activateHack(){
+  const hack = document.getElementById('hack');
+  hack.classList.add('active');
+
+  // nodos aleatorios sobre pantalla
+  for(let i=0;i<40;i++){
+    const n = document.createElement('div');
+    n.className = 'node';
+    n.style.left = (Math.random()*100) + '%';
+    n.style.top  = (Math.random()*100) + '%';
+    hack.appendChild(n);
+    setTimeout(()=> n.classList.add('on'), 200 + Math.random()*800);
+  }
+}
+
+/* =========================
+   FASE 4: RUTAS + UNIDADES
+   ========================= */
+const routes = [
+  // mini rutas demo en CDMX (puedes reemplazar por GTFS shapes)
+  [[19.43,-99.14],[19.44,-99.12],[19.445,-99.10],[19.45,-99.095]],
+  [[19.40,-99.13],[19.415,-99.115],[19.43,-99.105],[19.445,-99.09]]
+];
+
+// dibuja línea con “trazo progresivo”
+function drawAnimatedPolyline(latlngs, opts){
+  let i = 1;
+  const line = L.polyline([latlngs[0]], opts).addTo(map);
+  function step(){
+    if(i <= latlngs.length){
+      line.addLatLng(latlngs[i-1]);
+      i++;
+      requestAnimationFrame(step);
+    }
+  }
+  step();
+  return line;
+}
+
+// interpolación suave entre dos puntos
+function lerp(a,b,t){ return a + (b-a)*t; }
+function interp(p1, p2, t){
+  return [ lerp(p1[0], p2[0], t), lerp(p1[1], p2[1], t) ];
+}
+
+// animación continua a lo largo de la ruta
+function animateAlong(marker, latlngs, duration=8000){
+  let seg = 0, t0 = performance.now();
+
+  function loop(now){
+    const segCount = latlngs.length - 1;
+    const segDur = duration / segCount;
+
+    const elapsed = (now - t0);
+    const local = (elapsed % segDur) / segDur;
+
+    // segmento actual
+    const i = Math.floor((elapsed / segDur)) % segCount;
+    const p = interp(latlngs[i], latlngs[i+1], local);
+
+    marker.setLatLng(p);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+function initDemoRoutes(){
+  routes.forEach(r=>{
+    // línea TRON
+    drawAnimatedPolyline(r, {
+      color:"#00ffff",
+      weight:4,
+      className:"route",
+      opacity:0.9
+    });
+
+    // marcador (unidad)
+    const m = L.marker(r[0], {
+      icon: L.divIcon({className:"tron-marker"})
+    }).addTo(map);
+
+    // movimiento suave
+    animateAlong(m, r, 10000);
+  });
+}
+
+/* =========================
+   NOTA:
+   - Reemplaza `routes` por tus shapes GTFS reales.
+   - Cambia animateAlong para consumir posiciones en vivo (WebSocket).
+   ========================= */
+</script>
 </body>
 </html>
