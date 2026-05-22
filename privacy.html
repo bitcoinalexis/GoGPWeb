@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VEM - Política de Privacidad</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+    }
+
+    body{
+      font-family:'Inter',sans-serif;
+      background:#0b0f19;
+      color:#f5f7ff;
+      overflow-x:hidden;
+      line-height:1.7;
+    }
+
+    .background{
+      position:fixed;
+      inset:0;
+      background:
+      radial-gradient(circle at top left,#00d9ff22,transparent 30%),
+      radial-gradient(circle at bottom right,#00ff9d11,transparent 30%),
+      linear-gradient(135deg,#070b12,#0b1020,#10182a);
+      z-index:-2;
+    }
+
+    .grid{
+      position:fixed;
+      inset:0;
+      background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size:40px 40px;
+      z-index:-1;
+      opacity:.4;
+    }
+
+    .container{
+      width:90%;
+      max-width:950px;
+      margin:auto;
+      padding:60px 0;
+    }
+
+    .hero{
+      text-align:center;
+      margin-bottom:60px;
+    }
+
+    .logo{
+      width:95px;
+      height:95px;
+      margin:auto;
+      border-radius:24px;
+      background:linear-gradient(135deg,#00d9ff,#0084ff);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:42px;
+      font-weight:700;
+      box-shadow:
+      0 0 25px #00d9ff55,
+      0 0 80px #0084ff33;
+      margin-bottom:25px;
+    }
+
+    h1{
+      font-size:52px;
+      margin-bottom:10px;
+      letter-spacing:2px;
+    }
+
+    .subtitle{
+      color:#9cb3d8;
+      font-size:18px;
+    }
+
+    .card{
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
+      backdrop-filter:blur(12px);
+      border-radius:24px;
+      padding:35px;
+      margin-bottom:30px;
+      box-shadow:0 10px 40px rgba(0,0,0,.35);
+      transition:.3s;
+    }
+
+    .card:hover{
+      transform:translateY(-3px);
+      border-color:#00d9ff55;
+    }
+
+    h2{
+      color:#00d9ff;
+      margin-bottom:18px;
+      font-size:28px;
+    }
+
+    p{
+      color:#d8e2ff;
+      margin-bottom:15px;
+      font-size:16px;
+    }
+
+    ul{
+      padding-left:20px;
+      margin-top:10px;
+    }
+
+    li{
+      margin-bottom:12px;
+      color:#d8e2ff;
+    }
+
+    .highlight{
+      color:#00ffbf;
+      font-weight:600;
+    }
+
+    .warning{
+      background:#ff980015;
+      border:1px solid #ff980044;
+      padding:18px;
+      border-radius:16px;
+      margin-top:20px;
+      color:#ffe0b2;
+    }
+
+    .footer{
+      text-align:center;
+      margin-top:50px;
+      color:#7f91b2;
+      font-size:14px;
+    }
+
+    a{
+      color:#00d9ff;
+      text-decoration:none;
+    }
+
+    .badge{
+      display:inline-block;
+      padding:8px 14px;
+      border-radius:999px;
+      background:#00d9ff15;
+      border:1px solid #00d9ff44;
+      color:#00d9ff;
+      font-size:13px;
+      margin-top:15px;
+    }
+
+    @media(max-width:700px){
+
+      h1{
+        font-size:38px;
+      }
+
+      .card{
+        padding:25px;
+      }
+
+      h2{
+        font-size:24px;
+      }
+
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="background"></div>
+<div class="grid"></div>
+
+<div class="container">
+
+  <section class="hero">
+
+    <div class="logo">V</div>
+
+    <h1>VEM</h1>
+
+    <p class="subtitle">
+      Política de Privacidad
+    </p>
+
+    <div class="badge">
+      Última actualización: 2026
+    </div>
+
+  </section>
+
+  <section class="card">
+
+    <h2>1. Introducción</h2>
+
+    <p>
+      Bienvenido a <span class="highlight">VEM</span>.
+    </p>
+
+    <p>
+      VEM es una aplicación independiente desarrollada por Angy Labs que permite visualizar información de movilidad urbana y transporte en tiempo real mediante mapas interactivos y datos públicos/autorizados.
+    </p>
+
+    <p>
+      Esta Política de Privacidad explica qué información puede recopilar la aplicación, cómo se utiliza y cómo protegemos la privacidad de los usuarios.
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>2. Información recopilada</h2>
+
+    <p>
+      VEM puede recopilar la siguiente información:
+    </p>
+
+    <ul>
+      <li>Información técnica del dispositivo.</li>
+      <li>Dirección IP.</li>
+      <li>Datos aproximados de ubicación cuando el usuario otorga permisos.</li>
+      <li>Eventos de uso dentro de la aplicación.</li>
+      <li>Datos relacionados con rendimiento, errores o estabilidad.</li>
+    </ul>
+
+    <div class="warning">
+      VEM no recopila información personal sensible como contraseñas, datos bancarios o documentos oficiales.
+    </div>
+
+  </section>
+
+  <section class="card">
+
+    <h2>3. Uso de la ubicación</h2>
+
+    <p>
+      La ubicación del dispositivo puede utilizarse para:
+    </p>
+
+    <ul>
+      <li>Mostrar unidades cercanas.</li>
+      <li>Visualizar transporte en tiempo real.</li>
+      <li>Mejorar la experiencia de navegación dentro del mapa.</li>
+    </ul>
+
+    <p>
+      El usuario puede desactivar los permisos de ubicación en cualquier momento desde la configuración de su dispositivo.
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>4. Publicidad</h2>
+
+    <p>
+      VEM puede mostrar anuncios mediante servicios de terceros como Google AdMob.
+    </p>
+
+    <p>
+      Estos servicios pueden recopilar identificadores publicitarios y datos técnicos para mostrar anuncios relevantes y medir el rendimiento de campañas publicitarias.
+    </p>
+
+    <p>
+      Para más información:
+    </p>
+
+    <p>
+      <a href="https://policies.google.com/privacy" target="_blank">
+        https://policies.google.com/privacy
+      </a>
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>5. Datos de transporte</h2>
+
+    <p>
+      La aplicación utiliza información de movilidad obtenida mediante feeds GTFS-RT y/o fuentes de datos abiertos o autorizados públicamente.
+    </p>
+
+    <p>
+      VEM es una aplicación independiente y no está afiliada, respaldada ni operada por Metrobús de la Ciudad de México ni por ninguna entidad gubernamental.
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>6. Seguridad</h2>
+
+    <p>
+      Implementamos medidas razonables para proteger la información y prevenir accesos no autorizados, alteraciones o uso indebido de los datos.
+    </p>
+
+    <p>
+      Sin embargo, ningún sistema es completamente seguro y no podemos garantizar seguridad absoluta.
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>7. Servicios de terceros</h2>
+
+    <p>
+      La aplicación puede utilizar servicios externos como:
+    </p>
+
+    <ul>
+      <li>Google Play Services</li>
+      <li>Google AdMob</li>
+      <li>Firebase</li>
+      <li>OpenStreetMap</li>
+      <li>Leaflet.js</li>
+    </ul>
+
+    <p>
+      Estos servicios pueden procesar información bajo sus propias políticas de privacidad.
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>8. Cambios a esta política</h2>
+
+    <p>
+      Esta Política de Privacidad puede actualizarse ocasionalmente.
+    </p>
+
+    <p>
+      Los cambios serán publicados en esta misma página.
+    </p>
+
+  </section>
+
+  <section class="card">
+
+    <h2>9. Contacto</h2>
+
+    <p>
+      Si tienes preguntas relacionadas con esta Política de Privacidad puedes contactar a:
+    </p>
+
+    <p>
+      📧 angylabs.contact@gmail.com
+    </p>
+
+  </section>
+
+  <div class="footer">
+    © 2026 VEM · Angy Labs
+  </div>
+
+</div>
+
+</body>
+</html>
