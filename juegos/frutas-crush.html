@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Frutas Crush - Balatro Style</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bungee&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/three@0.137.0/build/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #07060d; font-family: 'Anton', sans-serif; color: #fff; user-select: none; }
+  #bg { position: fixed; inset: 0; z-index: 0; display: block; }
+  #flash { position: fixed; inset: 0; z-index: 5; background: #fff; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+  #ui { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; padding: 10px 12px; gap: 8px; }
+  #fx-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
+
+  .topbar { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .game-title { font-family: 'Bungee', sans-serif; font-size: clamp(18px, 4.5vw, 30px); letter-spacing: 2px; color: #ffe27a; text-shadow: -2px -2px 0 #3a1e00, 2px -2px 0 #3a1e00, -2px 2px 0 #3a1e00, 2px 2px 0 #3a1e00, 0 5px 0 #1a0d00, 0 8px 16px rgba(0,0,0,.7); }
+
+  .info-row { display: flex; align-items: center; gap: 14px; width: 100%; justify-content: center; }
+  .lives { display: flex; gap: 3px; }
+  .heart { width: 22px; height: 22px; transition: opacity .2s, transform .2s; }
+  .heart.dead { opacity: 0.18; filter: grayscale(1); }
+  .level-badge { font-family: 'Bungee', sans-serif; font-size: clamp(14px, 3.6vw, 22px); padding: 4px 14px; border-radius: 10px; letter-spacing: 1px; color: #fff;
+    background: linear-gradient(180deg, #2a2050, #150f2e); border: 3px solid #4a3a7e; box-shadow: 0 4px 0 rgba(0,0,0,.5); }
+  .level-badge.boss { background: linear-gradient(180deg, #6b1230, #2e0a18); border-color: #c0303a; color: #ffd0d6; }
+  .moves-box { display: flex; align-items: center; gap: 6px; }
+  .moves-box .tag { font-family: 'Bungee', sans-serif; font-size: 11px; letter-spacing: 1px; color: #ffcf4d; opacity: .85; }
+  #moves { font-family: 'Anton', sans-serif; font-size: clamp(22px, 5.5vw, 38px); color: #fff; line-height: 1; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000; }
+  #moves.low { color: #ff5a6a; }
+
+  .obj-panel { width: 100%; max-width: 520px; }
+  .bar-shell { position: relative; height: 22px; border-radius: 12px; background: rgba(0,0,0,.45); border: 3px solid #000; box-shadow: inset 0 2px 6px rgba(0,0,0,.6); overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 9px; }
+  .bar-fill.obj { background: linear-gradient(90deg, #ffd86b, #ff9a3a); box-shadow: 0 0 12px rgba(255,180,80,.6); }
+  .bar-fill.hp { background: linear-gradient(90deg, #ff5a6a, #8a0010); box-shadow: 0 0 12px rgba(255,60,80,.6); }
+  .bar-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Bungee', sans-serif; font-size: 11px; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 0 #000, 0 0 4px #000; z-index: 2; }
+
+  .boss-panel { display: flex; align-items: center; gap: 10px; }
+  #bossSprite { width: 56px; height: 56px; flex-shrink: 0; will-change: transform; }
+  .boss-meta { flex: 1; }
+  .boss-name { font-family: 'Bungee', sans-serif; font-size: 13px; letter-spacing: 1px; color: #ffb0bc; margin-bottom: 3px; }
+
+  .score-row { display: flex; align-items: center; gap: 12px; }
+  .score-block { text-align: center; transform-origin: center; }
+  .score-label { font-family: 'Bungee', sans-serif; font-size: 10px; letter-spacing: 2px; color: #ffcf4d; opacity: .85; }
+  #score { font-family: 'Anton', sans-serif; font-size: clamp(28px, 7vw, 54px); line-height: .9; color: #ffe27a;
+    text-shadow: -3px -3px 0 #5a3a00, 3px -3px 0 #5a3a00, -3px 3px 0 #5a3a00, 3px 3px 0 #5a3a00, 5px 5px 0 #1a0f00, 0 8px 16px rgba(0,0,0,.7); }
+  .pill { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-family: 'Anton', sans-serif; font-size: clamp(15px, 4vw, 24px);
+    border: 3px solid rgba(255,255,255,.92); box-shadow: 0 4px 0 rgba(0,0,0,.5), inset 0 3px 8px rgba(255,255,255,.3); }
+  .pill .tag { font-size: .42em; letter-spacing: 1px; opacity: .85; font-family: 'Bungee', sans-serif; }
+  .pill.chips { background: linear-gradient(180deg, #3aa0ff, #0a5bd6); color: #eaf6ff; }
+  .pill.mult { background: linear-gradient(180deg, #ff5a6a, #c0112a); color: #ffe9ec; }
+
+  #boardWrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+  #board { position: relative; border-radius: 16px; background: linear-gradient(160deg, rgba(30,20,60,.55), rgba(10,8,25,.65)); border: 4px solid #3a2f5e; box-shadow: 0 0 0 3px #000, 0 18px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(80,60,160,.2); touch-action: none; }
+  .cell { position: absolute; left: 0; top: 0; display: flex; align-items: center; justify-content: center; will-change: transform; pointer-events: none; }
+  .cell img { width: 86%; height: 86%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); pointer-events: none; -webkit-user-drag: none; }
+  .cell.selected img { filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 18px #ffe27a) drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+  .cell.selected { z-index: 3; }
+
+  .footer { display: flex; gap: 10px; align-items: center; }
+  .btn { font-family: 'Bungee', sans-serif; font-size: 14px; letter-spacing: 1px; padding: 9px 16px; border-radius: 12px; cursor: pointer; color: #fff;
+    background: linear-gradient(180deg, #2a2050, #150f2e); border: 3px solid #4a3a7e; box-shadow: 0 5px 0 rgba(0,0,0,.5); transition: transform .08s; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.5); }
+  .btn.gold { background: linear-gradient(180deg, #ffcf4d, #c08010); border-color: #fff3c0; color: #2a1500; }
+
+  .float-num { position: absolute; font-family: 'Anton', sans-serif; will-change: transform, opacity; transform-origin: center; white-space: nowrap; font-weight: 900; }
+  .float-num.score { color: #ffe27a; font-size: clamp(34px, 8vw, 72px); text-shadow: -3px -3px 0 #5a3a00, 3px -3px 0 #5a3a00, -3px 3px 0 #5a3a00, 3px 3px 0 #5a3a00, 6px 6px 0 #1a0f00, 0 10px 18px rgba(0,0,0,.6); }
+  .float-num.chips { color: #7fd0ff; font-size: clamp(20px, 5vw, 36px); text-shadow: -2px -2px 0 #003a80, 2px -2px 0 #003a80, -2px 2px 0 #003a80, 2px 2px 0 #003a80, 4px 4px 0 #001a3a; }
+  .float-num.mult { color: #ff8693; font-size: clamp(20px, 5vw, 36px); text-shadow: -2px -2px 0 #6a0010, 2px -2px 0 #6a0010, -2px 2px 0 #6a0010, 2px 2px 0 #6a0010, 4px 4px 0 #2a0008; }
+  .float-num.dmg { color: #ff5a6a; font-size: clamp(28px, 6vw, 50px); text-shadow: -3px -3px 0 #3a0008, 3px -3px 0 #3a0008, -3px 3px 0 #3a0008, 3px 3px 0 #3a0008, 5px 5px 0 #1a0004, 0 8px 14px rgba(0,0,0,.6); }
+  .float-num.banner { font-family: 'Bungee', sans-serif; color: #fff; font-size: clamp(26px, 7vw, 60px); text-shadow: -3px -3px 0 #b06b00, 3px -3px 0 #b06b00, -3px 3px 0 #b06b00, 3px 3px 0 #b06b00, 0 0 24px #ffcf4d, 0 8px 16px rgba(0,0,0,.7); }
+  .float-num.win { font-family: 'Bungee', sans-serif; color: #ffe27a; font-size: clamp(32px, 9vw, 80px); text-shadow: -3px -3px 0 #5a3a00, 3px -3px 0 #5a3a00, -3px 3px 0 #5a3a00, 3px 3px 0 #5a3a00, 0 0 30px #ffcf4d, 0 10px 20px rgba(0,0,0,.8); }
+
+  #modal { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; background: rgba(5,4,12,.78); backdrop-filter: blur(3px); }
+  #modal.show { display: flex; }
+  .modal-card { text-align: center; padding: 30px 36px; border-radius: 22px; background: linear-gradient(160deg, #1c1638, #0c0a1c); border: 4px solid #4a3a7e; box-shadow: 0 0 0 3px #000, 0 20px 60px rgba(0,0,0,.7); max-width: 90vw; }
+  .modal-card h2 { font-family: 'Bungee', sans-serif; font-size: clamp(24px, 6vw, 44px); color: #ffe27a; text-shadow: -2px -2px 0 #3a1e00, 2px -2px 0 #3a1e00, -2px 2px 0 #3a1e00, 2px 2px 0 #3a1e00, 0 6px 0 #1a0d00; margin-bottom: 10px; }
+  .modal-card h2.bad { color: #ff6a78; text-shadow: -2px -2px 0 #3a0008, 2px -2px 0 #3a0008, -2px 2px 0 #3a0008, 2px 2px 0 #3a0008, 0 6px 0 #1a0004; }
+  .modal-card p { font-family: 'Anton', sans-serif; font-size: clamp(15px, 4vw, 22px); color: #d8c9ff; margin-bottom: 22px; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="flash"></div>
+<div id="fx-layer"></div>
+
+<div id="ui">
+  <div class="topbar">
+    <div class="game-title">FRUTAS CRUSH</div>
+    <div class="info-row">
+      <div class="lives" id="lives"></div>
+      <div class="level-badge" id="levelBadge">NIVEL 1</div>
+      <div class="moves-box"><span class="tag">MOV</span><span id="moves">12</span></div>
+    </div>
+    <div class="obj-panel" id="objPanel"></div>
+    <div class="score-row">
+      <div class="pill chips"><span class="tag">CHIPS</span><span id="chipsV">0</span></div>
+      <div class="score-block" id="scoreWrap">
+        <div class="score-label">PUNTUACION</div>
+        <div id="score">0</div>
+      </div>
+      <div class="pill mult"><span class="tag">MULT</span><span id="multV">x1</span></div>
+    </div>
+  </div>
+
+  <div id="boardWrap"><div id="board"></div></div>
+
+  <div class="footer">
+    <div class="btn" id="resetBtn">REINICIAR JUEGO</div>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="modal-card">
+    <h2 id="modalTitle">NIVEL COMPLETADO</h2>
+    <p id="modalText"></p>
+    <div class="btn gold" id="modalBtn">CONTINUAR</div>
+  </div>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="heartGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a78"/><stop offset="1" stop-color="#c0112a"/></linearGradient>
+</defs></svg>
+
+<script>
+(function () {
+  var COLS = 8, ROWS = 8, CELL = 48, TYPES = 4;
+  var FRUITS = ['Frutas/Fresa.png', 'Frutas/2Banana.png', 'Frutas/3Ciruela.png', 'Frutas/4Naranja.png'];
+  var LEVELS = [
+    { type: 'normal', obj: 400,  moves: 12 },
+    { type: 'normal', obj: 750,  moves: 14 },
+    { type: 'boss',   hp: 1600,  moves: 15, name: 'PLATANO OSCURO',   hue: 55  },
+    { type: 'normal', obj: 1300, moves: 14 },
+    { type: 'normal', obj: 1700, moves: 15 },
+    { type: 'boss',   hp: 3200,  moves: 16, name: 'CIRUELA ABISMAL',  hue: 290 },
+    { type: 'normal', obj: 2300, moves: 15 },
+    { type: 'normal', obj: 2900, moves: 16 },
+    { type: 'boss',   hp: 5200,  moves: 18, name: 'FURIA CARMESI',    hue: 0   },
+    { type: 'boss',   hp: 9500,  moves: 22, name: 'REY DE LAS FRUTAS', hue: 45, final: true }
+  ];
+
+  var state = { level: 1, lives: 4, score: 0, levelScore: 0, moves: 0, movesMax: 0, objective: 0, isBoss: false, bossHP: 0, bossMaxHP: 0, busy: false, ended: false };
+
+  var grid = [];
+  var board = document.getElementById('board');
+  var boardWrap = document.getElementById('boardWrap');
+
+  var canvas = document.getElementById('bg');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  var scene = new THREE.Scene();
+  var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+  camera.position.z = 2;
+
+  var bgMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uIntensity: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uHue: { value: 0.55 }, uRed: { value: 0 } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+    fragmentShader: [
+      "precision highp float; varying vec2 vUv; uniform float uTime,uIntensity,uHue,uRed; uniform vec2 uRes;",
+      "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
+      "float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float a=hash(i),b=hash(i+vec2(1.,0.)),c=hash(i+vec2(0.,1.)),d=hash(i+vec2(1.,1.));return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}",
+      "vec3 palette(float t){vec3 a=vec3(0.08,0.04,0.18);vec3 b=vec3(0.55,0.35,0.75);vec3 c=vec3(1.0,0.85,0.4);vec3 d=vec3(0.0,0.25,0.5);return a+b*cos(6.2831*(c*t+d));}",
+      "void main(){vec2 uv=vUv;vec2 p=(uv-0.5);p.x*=uRes.x/uRes.y;float n=noise(p*3.0+vec2(uTime*0.12,uTime*0.08));float pl=sin(p.x*4.0+n*4.0+uTime*0.5)+sin(p.y*5.0-n*3.0+uTime*0.35);float t=pl*0.12+uHue+uTime*0.015;vec3 col=palette(t);float rad=length(p);col*=0.5;col+=vec3(0.9,0.75,0.3)*pow(max(0.0,sin(pl*1.5+uTime)),8.0)*(0.12+uIntensity*0.9);col+=vec3(0.25,0.45,1.0)*pow(max(0.0,sin(pl*2.0-uTime*0.6)),10.0)*(0.08+uIntensity*0.5);col*=1.0+uIntensity*0.6;col=mix(col,vec3(0.6,0.05,0.08),uRed*0.6);float vig=smoothstep(1.25,0.2,rad);col*=vig;gl_FragColor=vec4(col,1.0);}"
+    ].join("\n")
+  });
+  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMat));
+
+  var MAX = 800, cursor = 0;
+  var pPos = new Float32Array(MAX * 3), pCol = new Float32Array(MAX * 3), pSize = new Float32Array(MAX), pLife = new Float32Array(MAX), pVel = new Float32Array(MAX * 3), pBase = new Float32Array(MAX);
+  var pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  pGeo.setAttribute('aColor', new THREE.BufferAttribute(pCol, 3));
+  pGeo.setAttribute('aSize', new THREE.BufferAttribute(pSize, 1));
+  pGeo.setAttribute('aLife', new THREE.BufferAttribute(pLife, 1));
+  var pMat = new THREE.ShaderMaterial({
+    uniforms: { uPixel: { value: renderer.getPixelRatio() } },
+    vertexShader: "attribute vec3 aColor;attribute float aSize;attribute float aLife;varying vec3 vColor;varying float vLife;uniform float uPixel;void main(){vColor=aColor;vLife=aLife;vec4 mv=modelViewMatrix*vec4(position,1.0);float dist=-mv.z;gl_PointSize=aSize*uPixel*720.0/dist*(0.4+aLife*0.9);gl_Position=projectionMatrix*mv;}",
+    fragmentShader: "precision highp float;varying vec3 vColor;varying float vLife;void main(){vec2 c=gl_PointCoord-0.5;float d=length(c);float a=smoothstep(0.5,0.0,d);a*=a;vec3 col=vColor*vLife;gl_FragColor=vec4(col,a*vLife);}",
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  scene.add(new THREE.Points(pGeo, pMat));
+
+  var palettes = [
+    [[1.0, 0.88, 0.3], [1.0, 0.75, 0.15]],
+    [[1.0, 0.45, 0.35], [0.95, 0.2, 0.3]],
+    [[0.4, 0.75, 1.0], [0.15, 0.45, 1.0]],
+    [[1.0, 1.0, 0.85], [0.8, 0.6, 1.0]],
+    [[0.6, 1.0, 0.5], [0.2, 0.8, 0.3]]
+  ];
+  function setCol(i, r, g, b) { pCol[i * 3] = r; pCol[i * 3 + 1] = g; pCol[i * 3 + 2] = b; }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function burst(clientX, clientY, paletteIdx, count, power) {
+    var rect = canvas.getBoundingClientRect();
+    var wx = ((clientX - rect.left) / rect.width) * 2 - 1;
+    var wy = -(((clientY - rect.top) / rect.height) * 2 - 1);
+    var pal = palettes[paletteIdx % palettes.length];
+    for (var k = 0; k < count; k++) {
+      var i = cursor; cursor = (cursor + 1) % MAX;
+      pPos[i * 3] = wx; pPos[i * 3 + 1] = wy; pPos[i * 3 + 2] = 0;
+      var ang = Math.random() * Math.PI * 2;
+      var spd = rand(0.25, 1.2) * power;
+      pVel[i * 3] = Math.cos(ang) * spd * 0.6;
+      pVel[i * 3 + 1] = Math.sin(ang) * spd * 0.6 + rand(0.15, 0.5) * power;
+      pVel[i * 3 + 2] = rand(0.2, 0.9) * power;
+      pLife[i] = 1.0; pBase[i] = rand(0.04, 0.11);
+      var c = pal[Math.floor(Math.random() * pal.length)];
+      var j = rand(0.85, 1.1);
+      setCol(i, Math.min(1, c[0] * j), Math.min(1, c[1] * j), Math.min(1, c[2] * j));
+      pSize[i] = pBase[i];
+    }
+  }
+  function updateParticles(dt) {
+    for (var i = 0; i < MAX; i++) {
+      if (pLife[i] <= 0) continue;
+      pPos[i * 3] += pVel[i * 3] * dt;
+      pPos[i * 3 + 1] += pVel[i * 3 + 1] * dt;
+      pPos[i * 3 + 2] += pVel[i * 3 + 2] * dt;
+      pVel[i * 3] *= 0.965; pVel[i * 3 + 1] *= 0.965; pVel[i * 3 + 2] *= 0.97;
+      pVel[i * 3 + 1] -= 0.2 * dt;
+      pLife[i] -= dt * 1.05;
+      if (pLife[i] < 0) { pLife[i] = 0; pSize[i] = 0; }
+    }
+    pGeo.attributes.position.needsUpdate = true;
+    pGeo.attributes.aLife.needsUpdate = true;
+  }
+
+  function resizeBG() { var w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); bgMat.uniforms.uRes.value.set(w, h); }
+  window.addEventListener('resize', function () { resizeBG(); layout(); });
+  resizeBG();
+
+  var $score = document.getElementById('score');
+  var $chipsV = document.getElementById('chipsV');
+  var $multV = document.getElementById('multV');
+  var $scoreWrap = document.getElementById('scoreWrap');
+  var $ui = document.getElementById('ui');
+  var $flash = document.getElementById('flash');
+  var $fx = document.getElementById('fx-layer');
+  var $lives = document.getElementById('lives');
+  var $levelBadge = document.getElementById('levelBadge');
+  var $moves = document.getElementById('moves');
+  var $objPanel = document.getElementById('objPanel');
+  var $modal = document.getElementById('modal');
+  var $modalTitle = document.getElementById('modalTitle');
+  var $modalText = document.getElementById('modalText');
+  var $modalBtn = document.getElementById('modalBtn');
+
+  function fmt(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  var audioCtx = null;
+  function ensureAudio() { if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }
+  function tone(freq, dur, type, vol, slide) {
+    if (!audioCtx) return;
+    var t = audioCtx.currentTime;
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function matchSound(combo, big) { var base = 300 + Math.min(combo, 16) * 45; tone(base, 0.1, 'square', 0.14, base * 0.6); tone(base * 1.5, 0.09, 'triangle', 0.1, base * 1.1); if (big) { tone(base * 2, 0.16, 'sawtooth', 0.12, base * 3); tone(880, 0.2, 'square', 0.1); } }
+  function badSound() { tone(160, 0.14, 'sawtooth', 0.1, 90); }
+  var pointsSnd = null;
+  function playPoints() { if (!pointsSnd) { pointsSnd = new Audio('Frutas/lolo_s-points-474079.mp3'); pointsSnd.volume = 0.5; } try { pointsSnd.currentTime = 0; var p = pointsSnd.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  function winSound() { tone(523, 0.12, 'triangle', 0.14); setTimeout(function(){tone(659,0.12,'triangle',0.14);},120); setTimeout(function(){tone(784,0.12,'triangle',0.14);},240); setTimeout(function(){tone(1046,0.25,'triangle',0.16);},360); }
+  function loseSound() { tone(300,0.2,'sawtooth',0.13,120); setTimeout(function(){tone(180,0.3,'sawtooth',0.13,80);},180); }
+
+  var intensity = 0, redFlash = 0;
+  function floatNum(x, y, text, cls, bigScale) {
+    var el = document.createElement('div');
+    el.className = 'float-num ' + cls;
+    el.textContent = text;
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.transform = 'translate(-50%,-50%)';
+    $fx.appendChild(el);
+    var dx = (Math.random() - 0.5) * 90;
+    var tl = gsap.timeline({ onComplete: function () { el.remove(); } });
+    tl.fromTo(el, { scale: 0.2, opacity: 0 }, { scale: bigScale ? 1.6 : 1.4, opacity: 1, duration: 0.12, ease: 'back.out(3)' })
+      .to(el, { scale: 1, duration: 0.08 }, 0.12)
+      .to(el, { x: dx, y: -140 - Math.random() * 80, scale: 0.6, opacity: 0, duration: 0.85, ease: 'power2.in' }, 0.22);
+    return el;
+  }
+  function shake(v) { gsap.fromTo($ui, { x: 0, y: 0 }, { x: "+=" + rand(-v, v), y: "+=" + rand(-v, v), duration: 0.05, repeat: 5, yoyo: true, ease: 'power1.inOut', onComplete: function () { gsap.set($ui, { x: 0, y: 0 }); } }); }
+  function flash(s, color) { $flash.style.background = color || '#fff'; gsap.fromTo($flash, { opacity: 0 }, { opacity: s, duration: 0.05, onComplete: function () { gsap.to($flash, { opacity: 0, duration: 0.25 }); } }); }
+  function punchScore() { gsap.timeline().to($score, { scale: 1.22, color: '#fff6c2', duration: 0.08, ease: 'power2.out' }).to($score, { scale: 1, color: '#ffe27a', duration: 0.25, ease: 'elastic.out(1.2,0.4)' }); }
+
+  function heartSVG(filled) {
+    return '<svg class="heart' + (filled ? '' : ' dead') + '" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.2C0.4 8.4 1.6 4.5 5.2 4.1c2.1-.2 3.7 1 4.8 2.6C11 5.1 12.6 3.9 14.8 4.1c3.6.4 4.8 4.3 3.2 7.7C19.5 16.4 12 21 12 21z" fill="url(#heartGrad)" stroke="#3a0008" stroke-width="1.4"/></svg>';
+  }
+  function renderLives() {
+    var html = '';
+    for (var i = 0; i < 4; i++) html += heartSVG(i < state.lives);
+    $lives.innerHTML = html;
+  }
+
+  function bossSVG(hue) {
+    return '<svg id="bossSprite" viewBox="0 0 100 100"><defs><radialGradient id="bg' + hue + '" cx="0.5" cy="0.4" r="0.6"><stop offset="0" stop-color="hsl(' + hue + ',85%,60%)"/><stop offset="1" stop-color="hsl(' + hue + ',80%,25%)"/></radialGradient></defs>'
+      + '<circle cx="50" cy="52" r="40" fill="url(#bg' + hue + ')" stroke="#1a0008" stroke-width="3"/>'
+      + '<path d="M30 40 L42 46 M70 40 L58 46" stroke="#1a0008" stroke-width="4" stroke-linecap="round"/>'
+      + '<circle cx="40" cy="48" r="7" fill="#fff"/><circle cx="60" cy="48" r="7" fill="#fff"/>'
+      + '<circle cx="41" cy="49" r="3.4" fill="#1a0008"/><circle cx="61" cy="49" r="3.4" fill="#1a0008"/>'
+      + '<path d="M34 66 Q50 80 66 66 L62 66 L58 72 L54 66 L50 72 L46 66 L42 72 L38 66 Z" fill="#fff" stroke="#1a0008" stroke-width="2" stroke-linejoin="round"/>'
+      + '<circle cx="22" cy="30" r="4" fill="hsl(' + hue + ',90%,70%)"/><circle cx="78" cy="30" r="4" fill="hsl(' + hue + ',90%,70%)"/>'
+      + '</svg>';
+  }
+
+  function renderObjPanel() {
+    if (state.isBoss) {
+      $objPanel.innerHTML = '<div class="boss-panel">' + bossSVG(LEVELS[state.level - 1].hue) + '<div class="boss-meta"><div class="boss-name">' + LEVELS[state.level - 1].name + '</div>'
+        + '<div class="bar-shell"><div class="bar-fill hp" id="hpFill"></div><div class="bar-label" id="hpLabel"></div></div></div></div>';
+      updateBossHP();
+    } else {
+      $objPanel.innerHTML = '<div class="bar-shell"><div class="bar-fill obj" id="objFill"></div><div class="bar-label" id="objLabel"></div></div>';
+      updateObjective();
+    }
+  }
+  function updateObjective() {
+    var f = document.getElementById('objFill');
+    var l = document.getElementById('objLabel');
+    if (!f) return;
+    var pct = Math.min(100, (state.levelScore / state.objective) * 100);
+    f.style.width = pct + '%';
+    if (l) l.textContent = fmt(state.levelScore) + ' / ' + fmt(state.objective);
+  }
+  function updateBossHP() {
+    var f = document.getElementById('hpFill');
+    var l = document.getElementById('hpLabel');
+    if (!f) return;
+    var pct = Math.max(0, (state.bossHP / state.bossMaxHP) * 100);
+    f.style.width = pct + '%';
+    if (l) l.textContent = fmt(state.bossHP) + ' HP';
+  }
+  function updateMoves() {
+    $moves.textContent = Math.max(0, state.moves);
+    $moves.classList.toggle('low', state.moves <= 3);
+  }
+  function updateLevelBadge() {
+    var cfg = LEVELS[state.level - 1];
+    $levelBadge.textContent = (cfg.final ? 'JEFE FINAL ' : (state.isBoss ? 'JEFE ' : 'NIVEL ')) + state.level;
+    $levelBadge.classList.toggle('boss', state.isBoss);
+  }
+
+  function layout() {
+    var availW = Math.min(window.innerWidth * 0.94, 560);
+    var availH = window.innerHeight - 300;
+    CELL = Math.max(28, Math.min(Math.floor(availW / COLS), Math.floor(availH / ROWS), 60));
+    board.style.width = (CELL * COLS) + 'px';
+    board.style.height = (CELL * ROWS) + 'px';
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) if (grid[r] && grid[r][c] && grid[r][c].el) gsap.set(grid[r][c].el, { x: c * CELL, y: r * CELL });
+  }
+
+  function createPiece(type, col, row) {
+    var el = document.createElement('div');
+    el.className = 'cell';
+    var img = document.createElement('img');
+    img.src = FRUITS[type];
+    el.appendChild(img);
+    board.appendChild(el);
+    gsap.set(el, { width: CELL, height: CELL, x: col * CELL, y: row * CELL });
+    return el;
+  }
+  function causesMatch(col, row, type) {
+    if (col >= 2 && grid[row][col - 1] && grid[row][col - 2] && grid[row][col - 1].type === type && grid[row][col - 2].type === type) return true;
+    if (row >= 2 && grid[row - 1] && grid[row - 1][col] && grid[row - 2] && grid[row - 2][col] && grid[row - 1][col].type === type && grid[row - 2][col].type === type) return true;
+    return false;
+  }
+  function randTypeNoMatch(col, row) { var t, tries = 0; do { t = Math.floor(Math.random() * TYPES); tries++; } while (causesMatch(col, row, t) && tries < 20); return t; }
+  function buildBoard() {
+    board.innerHTML = '';
+    grid = [];
+    for (var r = 0; r < ROWS; r++) { grid[r] = []; for (var c = 0; c < COLS; c++) { var t = randTypeNoMatch(c, r); grid[r][c] = { type: t, el: createPiece(t, c, r) }; } }
+  }
+
+  function findMatches() {
+    var mark = {}, maxRun = 0;
+    for (var r = 0; r < ROWS; r++) {
+      var c = 0;
+      while (c < COLS) { var t = grid[r][c].type, run = 1; while (c + run < COLS && grid[r][c + run].type === t) run++; if (run >= 3) { for (var k = 0; k < run; k++) mark[r + ',' + (c + k)] = true; if (run > maxRun) maxRun = run; } c += run; }
+    }
+    for (var c2 = 0; c2 < COLS; c2++) {
+      var r2 = 0;
+      while (r2 < ROWS) { var t2 = grid[r2][c2].type, run2 = 1; while (r2 + run2 < ROWS && grid[r2 + run2][c2].type === t2) run2++; if (run2 >= 3) { for (var kk = 0; kk < run2; kk++) mark[(r2 + kk) + ',' + c2] = true; if (run2 > maxRun) maxRun = run2; } r2 += run2; }
+    }
+    var cells = [];
+    for (var key in mark) { var p = key.split(','); cells.push({ r: +p[0], c: +p[1] }); }
+    return { cells: cells, maxRun: maxRun };
+  }
+  function cellCenter(r, c) { var rect = board.getBoundingClientRect(); return { x: rect.left + (c + 0.5) * CELL, y: rect.top + (r + 0.5) * CELL }; }
+  function animTo(el, vars, dur, ease) { return new Promise(function (res) { gsap.to(el, Object.assign({ duration: dur, ease: ease || 'power2.out', onComplete: res }, vars)); }); }
+
+  async function processMatches(m) {
+    var cells = m.cells;
+    var big = m.maxRun >= 4;
+    var chips = cells.length * 15;
+    var mult = combo + (m.maxRun >= 5 ? 4 : (m.maxRun >= 4 ? 2 : 0)) + (cells.length >= 6 ? 2 : 0);
+    if (mult < 1) mult = 1;
+    var gain = chips * mult;
+
+    state.score += gain;
+    state.levelScore += gain;
+    $score.textContent = fmt(state.score);
+    $chipsV.textContent = chips;
+    $multV.textContent = 'x' + mult;
+    gsap.fromTo($multV, { scale: 1.5 }, { scale: 1, duration: 0.4, ease: 'elastic.out(1,0.3)' });
+    intensity = Math.min(1.5, intensity + 0.4 + (big ? 0.4 : 0));
+
+    if (state.isBoss && state.bossHP > 0) {
+      state.bossHP = Math.max(0, state.bossHP - gain);
+      damageBoss(gain);
+      updateBossHP();
+    } else if (!state.isBoss) {
+      updateObjective();
+    }
+
+    var sx = 0, sy = 0;
+    var pops = cells.map(function (cell) {
+      var center = cellCenter(cell.r, cell.c);
+      sx += center.x; sy += center.y;
+      var palIdx = grid[cell.r][cell.c].type;
+      burst(center.x, center.y, palIdx, 16, 1 + combo * 0.1);
+      var el = grid[cell.r][cell.c].el;
+      grid[cell.r][cell.c] = null;
+      return new Promise(function (res) {
+        gsap.timeline({ onComplete: function () { el.remove(); res(); } })
+          .to(el, { scale: 1.35, rotation: rand(-25, 25), duration: 0.1, ease: 'back.out(3)' })
+          .to(el, { scale: 0, rotation: '+=90', opacity: 0, duration: 0.2, ease: 'power2.in' });
+      });
+    });
+    var cx = sx / cells.length, cy = sy / cells.length;
+    floatNum(cx, cy, '+' + fmt(gain), 'score');
+    if (Math.random() < 0.8) floatNum(cx + rand(-50, -25), cy + rand(-30, 10), chips + ' chips', 'chips');
+    floatNum(cx + rand(25, 55), cy + rand(-30, 10), 'x' + mult, 'mult');
+    if (big) {
+      floatNum(cx, cy - CELL * 1.4, m.maxRun >= 5 ? 'MEGA COMBO!' : 'DULCE!', 'banner');
+      burst(cx, cy, 4, 30, 1.4);
+      flash(0.45, m.maxRun >= 5 ? '#ffd86b' : '#9ad0ff');
+    }
+    shake(Math.min(18, 5 + cells.length * 1.2 + combo));
+    flash(Math.min(0.3, 0.06 + cells.length * 0.02), '#fff');
+    punchScore();
+    playPoints();
+    await Promise.all(pops);
+  }
+
+  function damageBoss(gain) {
+    var bs = document.getElementById('bossSprite');
+    if (bs) {
+      var r = bs.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      floatNum(cx, cy, '-' + fmt(gain), 'dmg');
+      burst(cx, cy, 1, 18, 1.3);
+      gsap.fromTo(bs, { x: rand(-12, 12), y: rand(-6, 6), filter: 'brightness(2.4)' }, { x: 0, y: 0, filter: 'brightness(1)', duration: 0.45, ease: 'elastic.out(1,0.3)' });
+    }
+    redFlash = Math.min(1, redFlash + 0.5);
+  }
+
+  async function applyGravityAndRefill() {
+    var moves = [];
+    for (var c = 0; c < COLS; c++) {
+      var stack = [];
+      for (var r = ROWS - 1; r >= 0; r--) if (grid[r][c]) stack.push(grid[r][c]);
+      var newCount = ROWS - stack.length;
+      for (var i = 0; i < newCount; i++) stack.push({ type: Math.floor(Math.random() * TYPES), el: null });
+      for (var r2 = 0; r2 < ROWS; r2++) {
+        var item = stack[ROWS - 1 - r2];
+        if (item.el) { grid[r2][c] = { type: item.type, el: item.el }; moves.push(animTo(item.el, { y: r2 * CELL }, 0.42 + (ROWS - r2) * 0.02, 'bounce.out')); }
+        else { var el = createPiece(item.type, c, 0); gsap.set(el, { y: -newCount * CELL }); grid[r2][c] = { type: item.type, el: el }; moves.push(animTo(el, { y: r2 * CELL }, 0.5 + r2 * 0.02, 'bounce.out')); }
+      }
+    }
+    await Promise.all(moves);
+  }
+
+  var combo = 0;
+  async function resolveBoard() {
+    combo = 0;
+    while (true) {
+      var m = findMatches();
+      if (m.cells.length === 0) break;
+      combo++;
+      await processMatches(m);
+      if (state.isBoss && state.bossHP <= 0) { await applyGravityAndRefill(); break; }
+      if (!state.isBoss && state.levelScore >= state.objective) { await applyGravityAndRefill(); break; }
+      await applyGravityAndRefill();
+    }
+    combo = 0;
+  }
+
+  function adjacent(a, b) { return (Math.abs(a.r - b.r) + Math.abs(a.c - b.c)) === 1; }
+
+  function levelWon() { return state.isBoss ? state.bossHP <= 0 : state.levelScore >= state.objective; }
+
+  async function trySwap(a, b) {
+    if (state.busy || !adjacent(a, b)) return;
+    state.busy = true;
+    ensureAudio();
+    var ea = grid[a.r][a.c], eb = grid[b.r][b.c];
+    grid[a.r][a.c] = eb; grid[b.r][b.c] = ea;
+    await Promise.all([animTo(ea.el, { x: b.c * CELL, y: b.r * CELL }, 0.22, 'power2.inOut'), animTo(eb.el, { x: a.c * CELL, y: a.r * CELL }, 0.22, 'power2.inOut')]);
+    state.moves--;
+    updateMoves();
+    var m = findMatches();
+    if (m.cells.length === 0) {
+      grid[a.r][a.c] = ea; grid[b.r][b.c] = eb;
+      badSound();
+      gsap.timeline().to([ea.el, eb.el], { scale: 0.85, duration: 0.08 }).to([ea.el, eb.el], { scale: 1, duration: 0.08 });
+      await Promise.all([animTo(ea.el, { x: a.c * CELL, y: a.r * CELL }, 0.22, 'power2.inOut'), animTo(eb.el, { x: b.c * CELL, y: b.r * CELL }, 0.22, 'power2.inOut')]);
+      if (state.moves <= 0) { await loseLife(); return; }
+      state.busy = false;
+      return;
+    }
+    await resolveBoard();
+    if (levelWon()) { await winLevel(); return; }
+    if (state.moves <= 0) { await loseLife(); return; }
+    state.busy = false;
+  }
+
+  function celebrateLevel() {
+    var r = board.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    for (var i = 0; i < 6; i++) setTimeout(function () { burst(cx + rand(-120, 120), cy + rand(-120, 120), 0, 26, 1.5); }, i * 70);
+    floatNum(cx, cy, state.isBoss ? 'JEFE DERROTADO!' : 'NIVEL COMPLETADO!', 'win', true);
+    flash(0.5, '#ffd86b');
+    winSound();
+  }
+
+  async function winLevel() {
+    state.busy = true;
+    celebrateLevel();
+    await delay(1100);
+    if (state.level >= 10) {
+      showModal('VICTORIA TOTAL', 'Has conquistado los 10 niveles. Puntuacion final: ' + fmt(state.score), 'JUGAR DE NUEVO', false, resetAll);
+    } else {
+      var wasBoss = state.isBoss;
+      showModal(wasBoss ? 'JEFE DERROTADO' : 'NIVEL ' + state.level + ' COMPLETADO',
+        wasBoss ? 'Has vencido al jefe. Prepocate para el nivel ' + (state.level + 1) + '.' : 'Objetivo alcanzado. Siguiente: nivel ' + (state.level + 1) + '.',
+        'SIGUIENTE NIVEL', false, nextLevel);
+    }
+  }
+
+  async function loseLife() {
+    state.busy = true;
+    state.lives--;
+    renderLives();
+    loseSound();
+    flash(0.45, '#ff2a2a');
+    shake(16);
+    redFlash = 1;
+    var r = board.getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2, 1, 30, 1.3);
+    await delay(700);
+    if (state.lives <= 0) {
+      showModal('GAME OVER', 'Te has quedado sin vidas en el nivel ' + state.level + '. Puntuacion: ' + fmt(state.score), 'REINICIAR JUEGO', true, resetAll);
+    } else {
+      showModal('VIDA PERDIDA', 'No completaste el objetivo. Vidas restantes: ' + state.lives, 'REINTENTAR NIVEL', true, retryLevel);
+    }
+  }
+
+  function showModal(title, text, btn, bad, onBtn) {
+    $modalTitle.textContent = title;
+    $modalTitle.classList.toggle('bad', !!bad);
+    $modalText.textContent = text;
+    $modalBtn.textContent = btn;
+    $modalBtn.onclick = function () { hideModal(); onBtn(); };
+    $modal.classList.add('show');
+    gsap.fromTo('.modal-card', { scale: 0.6, opacity: 0, rotation: -4 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.45, ease: 'back.out(1.6)' });
+  }
+  function hideModal() { $modal.classList.remove('show'); $modalBtn.onclick = null; }
+
+  function setupLevel(n) {
+    var cfg = LEVELS[n - 1];
+    state.level = n;
+    state.isBoss = cfg.type === 'boss';
+    state.movesMax = cfg.moves;
+    state.moves = cfg.moves;
+    state.levelScore = 0;
+    if (state.isBoss) { state.bossMaxHP = cfg.hp; state.bossHP = cfg.hp; }
+    else { state.objective = cfg.obj; }
+    buildBoard();
+    layout();
+    renderObjPanel();
+    updateLevelBadge();
+    updateMoves();
+    $chipsV.textContent = '0'; $multV.textContent = 'x1';
+    renderLives();
+    if (state.isBoss) {
+      var bs = document.getElementById('bossSprite');
+      if (bs) gsap.to(bs, { scale: 1.06, duration: 0.9, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+    }
+    state.busy = false;
+  }
+  function nextLevel() { setupLevel(state.level + 1); }
+  function retryLevel() { setupLevel(state.level); }
+  function resetAll() { state.score = 0; state.lives = 4; $score.textContent = '0'; setupLevel(1); }
+
+  var sel = null, drag = null;
+  function cellFromPoint(clientX, clientY) {
+    var rect = board.getBoundingClientRect();
+    var c = Math.floor((clientX - rect.left) / CELL);
+    var r = Math.floor((clientY - rect.top) / CELL);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return null;
+    return { r: r, c: c };
+  }
+  function highlightSel() {
+    document.querySelectorAll('.cell.selected').forEach(function (el) { el.classList.remove('selected'); });
+    if (sel && grid[sel.r] && grid[sel.r][sel.c] && grid[sel.r][sel.c].el) grid[sel.r][sel.c].el.classList.add('selected');
+  }
+  boardWrap.addEventListener('pointerdown', function (e) { if (state.busy) return; var cell = cellFromPoint(e.clientX, e.clientY); if (!cell) return; drag = { cell: cell, x: e.clientX, y: e.clientY, moved: false }; });
+  window.addEventListener('pointermove', function (e) {
+    if (!drag || drag.moved || state.busy) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) < CELL * 0.35 && Math.abs(dy) < CELL * 0.35) return;
+    var dir = (Math.abs(dx) > Math.abs(dy)) ? { r: 0, c: dx > 0 ? 1 : -1 } : { r: dy > 0 ? 1 : -1, c: 0 };
+    var target = { r: drag.cell.r + dir.r, c: drag.cell.c + dir.c };
+    sel = null; highlightSel(); drag.moved = true;
+    if (target.r >= 0 && target.r < ROWS && target.c >= 0 && target.c < COLS) { ensureAudio(); trySwap(drag.cell, target); }
+  });
+  window.addEventListener('pointerup', function () {
+    if (!drag) return;
+    if (!drag.moved) {
+      var cell = drag.cell;
+      if (sel && adjacent(sel, cell)) { var a = sel; sel = null; highlightSel(); ensureAudio(); trySwap(a, cell); }
+      else { sel = cell; highlightSel(); }
+    }
+    drag = null;
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function () { if (state.busy) return; resetAll(); });
+
+  setupLevel(1);
+
+  var last = performance.now();
+  function loop(now) {
+    requestAnimationFrame(loop);
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    bgMat.uniforms.uTime.value = now * 0.001;
+    intensity *= 0.93; redFlash *= 0.9;
+    bgMat.uniforms.uIntensity.value = intensity;
+    bgMat.uniforms.uRed.value = redFlash;
+    if (state.isBoss) bgMat.uniforms.uHue.value = LEVELS[state.level - 1].hue / 360;
+    updateParticles(dt);
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
