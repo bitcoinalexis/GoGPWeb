@@ -67,6 +67,7 @@
     background: linear-gradient(180deg, #2a2050, #150f2e); border: 3px solid #4a3a7e; box-shadow: 0 5px 0 rgba(0,0,0,.5); transition: transform .08s; }
   .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.5); }
   .btn.gold { background: linear-gradient(180deg, #ffcf4d, #c08010); border-color: #fff3c0; color: #2a1500; }
+  .btn.off { opacity: .5; filter: grayscale(.6); }
 
   .float-num { position: absolute; font-family: 'Anton', sans-serif; will-change: transform, opacity; transform-origin: center; white-space: nowrap; font-weight: 900; }
   .float-num.score { color: #ffe27a; font-size: clamp(34px, 8vw, 72px); text-shadow: -3px -3px 0 #5a3a00, 3px -3px 0 #5a3a00, -3px 3px 0 #5a3a00, 3px 3px 0 #5a3a00, 6px 6px 0 #1a0f00, 0 10px 18px rgba(0,0,0,.6); }
@@ -111,6 +112,7 @@
   <div id="boardWrap"><div id="board"></div></div>
 
   <div class="footer">
+    <div class="btn" id="soundBtn">SONIDO ON</div>
     <div class="btn" id="resetBtn">REINICIAR JUEGO</div>
   </div>
 </div>
@@ -248,14 +250,16 @@
   var $modalTitle = document.getElementById('modalTitle');
   var $modalText = document.getElementById('modalText');
   var $modalBtn = document.getElementById('modalBtn');
+  var $soundBtn = document.getElementById('soundBtn');
 
   function fmt(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
   function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
+  var soundOn = (function () { try { return localStorage.getItem('fc_sound') !== '0'; } catch (e) { return true; } })();
   var audioCtx = null;
   function ensureAudio() { if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }
   function tone(freq, dur, type, vol, slide) {
-    if (!audioCtx) return;
+    if (!soundOn || !audioCtx) return;
     var t = audioCtx.currentTime;
     var o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = type || 'square'; o.frequency.setValueAtTime(freq, t);
@@ -269,7 +273,7 @@
   function matchSound(combo, big) { var base = 300 + Math.min(combo, 16) * 45; tone(base, 0.1, 'square', 0.14, base * 0.6); tone(base * 1.5, 0.09, 'triangle', 0.1, base * 1.1); if (big) { tone(base * 2, 0.16, 'sawtooth', 0.12, base * 3); tone(880, 0.2, 'square', 0.1); } }
   function badSound() { tone(160, 0.14, 'sawtooth', 0.1, 90); }
   var pointsSnd = null;
-  function playPoints() { if (!pointsSnd) { pointsSnd = new Audio('Frutas/lolo_s-points-474079.mp3'); pointsSnd.volume = 0.5; } try { pointsSnd.currentTime = 0; var p = pointsSnd.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  function playPoints() { if (!soundOn) return; if (!pointsSnd) { pointsSnd = new Audio('Frutas/lolo_s-points-474079.mp3'); pointsSnd.volume = 0.5; } try { pointsSnd.currentTime = 0; var p = pointsSnd.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
   function winSound() { tone(523, 0.12, 'triangle', 0.14); setTimeout(function(){tone(659,0.12,'triangle',0.14);},120); setTimeout(function(){tone(784,0.12,'triangle',0.14);},240); setTimeout(function(){tone(1046,0.25,'triangle',0.16);},360); }
   function loseSound() { tone(300,0.2,'sawtooth',0.13,120); setTimeout(function(){tone(180,0.3,'sawtooth',0.13,80);},180); }
 
@@ -631,6 +635,10 @@
     }
     drag = null;
   });
+
+  function renderSoundBtn() { $soundBtn.textContent = soundOn ? 'SONIDO ON' : 'SONIDO OFF'; $soundBtn.classList.toggle('off', !soundOn); }
+  $soundBtn.addEventListener('click', function () { soundOn = !soundOn; try { localStorage.setItem('fc_sound', soundOn ? '1' : '0'); } catch (e) {} renderSoundBtn(); if (soundOn) ensureAudio(); });
+  renderSoundBtn();
 
   document.getElementById('resetBtn').addEventListener('click', function () { if (state.busy) return; resetAll(); });
 
